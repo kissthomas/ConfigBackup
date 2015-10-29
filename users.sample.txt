@@ -1,0 +1,2 @@
+Username: Real Name    : Email address
+root    : ROOT         : it@quaestorbank.hu
