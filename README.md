@@ -64,7 +64,7 @@ git push --set-upstream origin master
 
 ### Cron configuration
 
-The easiest way to run the script is to copy ConfigBackup.cron.sh to your
+The easiest way to run the script is to copy ConfigBackup_cron to your
 cront.hourly directory. You should check out the configuration section of
 the cron script too:
 
