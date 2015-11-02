@@ -4,10 +4,15 @@
 ################################################################################
 
 BASEDIR="/tftpboot"
-FILTER="*.cfg"
+
+CISCO_FILTER="*.cfg"
+CISCO_REMOVE_THESE=("ntp clock-period")
+
+MIKROTIK_FILTER="*.rsc"
+MIKROTIK_REMOVE_THESE=("by RouterOS")
+
 GIT_ADD_ALL=false
 GIT_DELETE=false
-REMOVE_THESE=("ntp clock-period")
 
 ################################################################################
 #                             Autoconf & Prepare                               #
@@ -18,14 +23,22 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" #"Bad MC syntax higlight
 STARTDIR=`pwd`
 CDATE=""
 CUSER=""
+MDATE=""
 IFS=""
 
 ################################################################################
 #                            Procedures & Fuctions                             #
 ################################################################################
 
-function do_remove() {
-    for PATTERN in ${REMOVE_THESE[@]}; do
+function do_remove_cisco() {
+    for PATTERN in ${CISCO_REMOVE_THESE[@]}; do
+        PATTERN="/$PATTERN/d"
+        sed -i $PATTERN $1
+    done
+}
+
+function do_remove_mikrotik() {
+    for PATTERN in ${MIKROTIK_REMOVE_THESE[@]}; do
         PATTERN="/$PATTERN/d"
         sed -i $PATTERN $1
     done
@@ -68,7 +81,7 @@ EOF
     $GIT commit -m "$MESSAGE" --author "$AUTHOR" > /dev/null
 }
 
-function get_config_date() {
+function get_cisco_config_date() {
     if [[ $# < 1 ]]; then
         return
     fi
@@ -76,11 +89,19 @@ function get_config_date() {
     CDATE=`date --date="$LINE" +"%F %T"`
 }
 
-function get_config_user() {
+function get_cisco_config_user() {
     if [[ $# < 1 ]]; then
         return
     fi
     CUSER=`grep -m 1 "! Last configuration change at"  $1 | awk '{print $13}'`
+}
+
+function get_mikrotik_config_date() {
+    if [[ $# < 1 ]]; then
+        return
+    fi
+    LINE=`grep -m 1 " by RouterOS " $1 | awk '{print $2 "/" $3}' | awk -F/ '{print $1" "$2" "$3" "$4}'`
+    MDATE=`date --date="$LINE" +"%F %T"`
 }
 
 ################################################################################
@@ -143,23 +164,39 @@ fi
 #                             Processing config files                          #
 ################################################################################
 
-for FILE in $FILTER ; do
-    do_remove $FILE
+for FILE in $CISCO_FILTER ; do
+    get_cisco_config_date $FILE
+    get_cisco_config_user $FILE
+    do_remove_cisco $FILE
     STATUS=`$GIT status -s $FILE | awk '{print $1}'`
     case $STATUS in
         ??)
             echo "Adding new file to backup repository: $FILE"
             $GIT add $FILE
-            get_config_date $FILE
-            get_config_user $FILE
             git_commit "NEW $FILE @ $CDATE" $CUSER
             ;;
         M)
             echo "Updating configuration file: $FILE"
             $GIT add $FILE
-            get_config_date $FILE
-            get_config_user $FILE
             git_commit "UPDATE $FILE @ $CDATE" $CUSER
+            ;;
+    esac
+done
+
+for FILE in $MIKROTIK_FILTER ; do
+    get_mikrotik_config_date $FILE
+    do_remove_mikrotik $FILE
+    STATUS=`$GIT status -s $FILE | awk '{print $1}'`
+    case $STATUS in
+        ??)
+            echo "Adding new file to backup repository: $FILE"
+            $GIT add $FILE
+            git_commit "NEW $FILE @ $MDATE"
+            ;;
+        M)
+            echo "Updating configuration file: $FILE"
+            $GIT add $FILE
+            git_commit "UPDATE $FILE @ $MDATE"
             ;;
 
     esac
