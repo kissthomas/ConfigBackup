@@ -35,6 +35,12 @@ ConfigBackup.sh:
    If you set this value to true, the script will check for deleted files
    and will delete them from the git repostiory too.
 
+5. REMOVE_THESE=("clock-period" "AnotherstuffToRemove")
+
+   You can specify keywords which you don't want to include in your backup.
+   A good example is __ntp clock-period__ on Cisco, which can change every
+   time you backup your configuration.
+
 
 ### User configuration
 

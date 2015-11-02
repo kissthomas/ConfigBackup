@@ -7,6 +7,7 @@ BASEDIR="/tftpboot"
 FILTER="*.cfg"
 GIT_ADD_ALL=false
 GIT_DELETE=false
+REMOVE_THESE=("ntp clock-period")
 
 ################################################################################
 #                             Autoconf & Prepare                               #
@@ -17,10 +18,18 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" #"Bad MC syntax higlight
 STARTDIR=`pwd`
 CDATE=""
 CUSER=""
+IFS=""
 
 ################################################################################
 #                            Procedures & Fuctions                             #
 ################################################################################
+
+function do_remove() {
+    for PATTERN in ${REMOVE_THESE[@]}; do
+        PATTERN="/$PATTERN/d"
+        sed -i $PATTERN $1
+    done
+}
 
 function git_commit() {
     if [[ $# < 1 ]]; then
@@ -47,7 +56,8 @@ function git_commit() {
 
     if [[ $EMAIL != "" ]]; then
         echo "Sending email to $AUTHOR about the config changes"
-        mail -s "$MESSAGE" "$EMAIL" <<EOF
+        SUBJECT=`echo -e $MESSAGE | head -n 1`
+        mail -s "$SUBJECT" "$EMAIL" <<EOF
 Dear $NAME,
     Your configuration changes have been backed up.
 
@@ -134,6 +144,7 @@ fi
 ################################################################################
 
 for FILE in $FILTER ; do
+    do_remove $FILE
     STATUS=`$GIT status -s $FILE | awk '{print $1}'`
     case $STATUS in
         ??)
